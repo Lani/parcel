@@ -112,6 +112,14 @@ export class NodePackageManager implements PackageManager {
     options?: ?{|range?: string, autoinstall?: boolean, saveDev?: boolean|},
   ) {
     let basedir = path.dirname(from);
+    /*
+   // use the "real path" of the directory to match default node resolution algorithm
+    try {
+      basedir = await this.options.inputFS.realpath(basedir);
+    } catch (err) {
+      // ignore
+    }
+*/
     let key = basedir + ':' + name;
     let resolved = this.cache.get(key);
     if (!resolved) {

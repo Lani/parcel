@@ -21,6 +21,16 @@ const prettifyTime = require('./utils/prettifyTime');
 const getRootDir = require('@parcel/utils/src/getRootDir').default;
 const {glob, isGlob} = require('./utils/glob');
 
+const keypress = async () => {
+  process.stdin.setRawMode(true);
+  return new Promise(resolve =>
+    process.stdin.once('data', () => {
+      process.stdin.setRawMode(false);
+      resolve();
+    }),
+  );
+};
+
 /**
  * The Bundler is the main entry point. It resolves and loads assets,
  * creates the bundle tree, and manages the worker farm, cache, and file watcher.
@@ -372,6 +382,9 @@ class Bundler extends EventEmitter {
       return;
     }
 
+    console.log('Bundler start');
+    await keypress();
+
     await this.loadPlugins();
 
     if (!this.options.env) {
@@ -388,6 +401,10 @@ class Bundler extends EventEmitter {
       if (process.env.NODE_ENV === 'test' && !this.watcher.ready) {
         await new Promise(resolve => this.watcher.once('ready', resolve));
       }
+
+      console.log('Bundler start', {watchedGlobs: this.watchedGlobs});
+      await keypress();
+
       this.watchedGlobs.forEach(glob => {
         this.watcher.add(glob);
       });
@@ -452,7 +469,7 @@ class Bundler extends EventEmitter {
     }
 
     path = await fs.realpath(path);
-
+    console.log('Bundler watch', {path});
     if (!this.watchedAssets.has(path)) {
       this.watcher.watch(path);
       this.watchedAssets.set(path, new Set());

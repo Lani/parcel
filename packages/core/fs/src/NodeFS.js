@@ -89,6 +89,8 @@ export class NodeFS implements FileSystem {
     fn: (err: ?Error, events: Array<Event>) => mixed,
     opts: WatcherOptions,
   ): Promise<AsyncSubscription> {
+    console.log('NodeFS.watch', {dir, opts});
+
     return watcher.subscribe(dir, fn, opts);
   }
 

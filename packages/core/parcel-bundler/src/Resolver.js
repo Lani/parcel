@@ -173,6 +173,13 @@ class Resolver {
       return {filePath: builtins[filename]};
     }
 
+    console.log('Resolver.findNodeModulePath', {filename, dir});
+    try {
+      dir = await this.options.inputFS.realpath(dir);
+    } catch (err) {
+      // ignore
+    }
+
     let parts = getModuleParts(filename);
     let root = path.parse(dir).root;
 

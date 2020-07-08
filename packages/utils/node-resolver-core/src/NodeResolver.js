@@ -48,6 +48,16 @@ type Module = {|
   filePath?: FilePath,
 |};
 
+const keypress = async () => {
+  process.stdin.setRawMode(true);
+  return new Promise(resolve =>
+    process.stdin.once('data', () => {
+      process.stdin.setRawMode(false);
+      resolve();
+    }),
+  );
+};
+
 /**
  * This resolver implements a modified version of the node_modules resolution algorithm:
  * https://nodejs.org/api/modules.html#modules_all_together
@@ -100,8 +110,13 @@ export default class NodeResolver {
 
     extensions.unshift('');
 
+    // console.log('RESOLVE', {filename, parent, isURL, env});
+
     // Resolve the module directory or local file path
     let module = await this.resolveModule({filename, parent, isURL, env});
+    // console.log('RESOLVE', {module});
+    // await keypress();
+
     if (!module) {
       return {isExcluded: true};
     }
@@ -264,7 +279,6 @@ export default class NodeResolver {
     if (parent) {
       filename = await this.resolveFilename(filename, dir, isURL);
     }
-
     // Resolve aliases in the parent module for this file.
     filename = await this.loadAlias(filename, dir, env);
 
@@ -371,6 +385,9 @@ export default class NodeResolver {
   }
 
   async resolveFilename(filename: string, dir: string, isURL: ?boolean) {
+    // console.log('resolveFilename', {filename, dir, isURL});
+    // await keypress();
+
     switch (filename[0]) {
       case '/': {
         // Absolute path. Resolve relative to project root.
@@ -476,8 +493,17 @@ export default class NodeResolver {
   }
 
   async findNodeModulePath(filename: string, dir: string) {
+    // use the "real path" of the directory to match default node resolution algorithm
+    try {
+      dir = await this.options.inputFS.realpath(dir);
+    } catch (err) {
+      // ignore
+    }
+
     let [moduleName, subPath] = this.getModuleParts(filename);
     let root = path.parse(dir).root;
+
+    // console.log('findNodeModulePath', {filename, moduleName, subPath, root, dir});
 
     while (dir !== root) {
       // Skip node_modules directories
@@ -488,6 +514,7 @@ export default class NodeResolver {
       try {
         // First, check if the module directory exists. This prevents a lot of unnecessary checks later.
         let moduleDir = path.join(dir, 'node_modules', moduleName);
+        // let moduleDir = require.resolve(moduleName);
         let stats = await this.options.inputFS.stat(moduleDir);
         if (stats.isDirectory()) {
           return {

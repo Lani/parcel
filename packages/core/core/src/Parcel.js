@@ -40,6 +40,16 @@ import {PromiseQueue} from '@parcel/utils';
 
 registerCoreWithSerializer();
 
+const keypress = async () => {
+  process.stdin.setRawMode(true);
+  return new Promise(resolve =>
+    process.stdin.once('data', () => {
+      process.stdin.setRawMode(false);
+      resolve();
+    }),
+  );
+};
+
 export const INTERNAL_TRANSFORM = Symbol('internal_transform');
 export const INTERNAL_RESOLVE = Symbol('internal_resolve');
 
@@ -203,6 +213,7 @@ export default class Parcel {
       }
 
       this.#watcherSubscription = await this._getWatcherSubscription();
+      await keypress();
       await this.#reporterRunner.report({type: 'watchStart'});
 
       // Kick off a first build, but don't await its results. Its results will
@@ -360,15 +371,25 @@ export default class Parcel {
 
     let resolvedOptions = nullthrows(this.#resolvedOptions);
     let opts = this.#assetGraphBuilder.getWatcherOptions();
+
+    console.log('Parcel _getWatcherSubscription', {
+      projectRoot: resolvedOptions.projectRoot,
+    });
+
     return resolvedOptions.inputFS.watch(
       resolvedOptions.projectRoot,
       (err, events) => {
         if (err) {
+          console.log('Parcel._getWatcherSubscription', {err});
+
           this.#watchEvents.emit({error: err});
           return;
         }
 
         let isInvalid = this.#assetGraphBuilder.respondToFSEvents(events);
+
+        console.log('Parcel._getWatcherSubscription', {err});
+
         if (isInvalid && this.#watchQueue.getNumWaiting() === 0) {
           if (this.#watchAbortController) {
             this.#watchAbortController.abort();
